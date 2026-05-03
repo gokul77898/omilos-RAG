@@ -29,14 +29,6 @@ OmilosRAG combines vector search, knowledge graph, and cross-encoder reranking i
 
 ## Architecture
 
-<div align="center">
-
-![OmilosRAG Architecture](showcase/omilosrag_architecture.jpg)
-
-**OmilosRAG System Architecture** - Hybrid Knowledge Base with Multi-Provider LLM Support
-
-</div>
-
 ### Component Overview
 
 | Layer | Components | Purpose |
@@ -48,14 +40,6 @@ OmilosRAG combines vector search, knowledge graph, and cross-encoder reranking i
 | **Data Layer** | PostgreSQL 15, ChromaDB, LightRAG | Metadata, Vector Embeddings, Knowledge Graph (NetworkX/Neo4j) |
 | **Document Parser** | Docling | PDF/DOCX/PPTX/HTML/TXT with layout preservation |
 | **Retrieval** | Hybrid Retriever | Vector + KG + Reranker Pipeline |
-
-## Showcase
-
-<div align="center">
- 
-https://github.com/user-attachments/assets/fa845fab-dcc3-4a64-86ac-6dda2c073156
-
-</div>
 
 ---
 
