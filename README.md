@@ -29,6 +29,14 @@ OmilosRAG combines vector search, knowledge graph, and cross-encoder reranking i
 
 ## Architecture
 
+<div align="center">
+
+![OmilosRAG Architecture](showcase/omilosrag_architecture.png)
+
+*Complete system architecture showing Frontend, Backend, ML Models, LLM Providers, and Data Layer*
+
+</div>
+
 ### Component Overview
 
 | Layer | Components | Purpose |
@@ -40,6 +48,15 @@ OmilosRAG combines vector search, knowledge graph, and cross-encoder reranking i
 | **Data Layer** | PostgreSQL 15, ChromaDB, LightRAG | Metadata, Vector Embeddings, Knowledge Graph (NetworkX/Neo4j) |
 | **Document Parser** | Docling | PDF/DOCX/PPTX/HTML/TXT with layout preservation |
 | **Retrieval** | Hybrid Retriever | Vector + KG + Reranker Pipeline |
+
+### Key Features Visualized
+
+- **🌐 Frontend**: nginx reverse proxy + React SPA with real-time SSE streaming
+- **⚡ Backend**: FastAPI with Chat Agent, Hybrid Retriever, and Docling Parser
+- **🤖 ML Models**: Multilingual embeddings (bge-m3) + Cross-encoder reranking
+- **🔮 LLM Providers**: Dual support for Gemini API (cloud) and Ollama (local)
+- **💾 Data Layer**: PostgreSQL for metadata, ChromaDB for vectors, LightRAG for knowledge graph
+- **🕸️ Knowledge Graph**: NetworkX (default) or Neo4j for scalable entity-relationship storage
 
 ---
 
