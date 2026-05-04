@@ -16,7 +16,6 @@
 OmilosRAG combines vector search, knowledge graph, and cross-encoder reranking into one seamless RAG pipeline — powered by Gemini, local Ollama, or fully offline sentence-transformers.
 
 > **✨ Latest Updates:**
-> - 🎨 **Complete Rebranding**: All code, packages, UI, and documentation renamed to OmilosRAG
 > - 🕸️ **Neo4j Integration**: Knowledge Graph now supports Neo4j for scalable graph storage
 > - 💫 **Animated Graph UI**: Flowing particles, pulsing nodes, interactive visualizations
 > - 📦 **Bulk Upload Script**: Process 10GB+ datasets with `bulk_upload.py`
