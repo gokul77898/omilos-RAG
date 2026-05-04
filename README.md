@@ -659,6 +659,6 @@ All endpoints prefixed with `/api/v1`. Interactive docs at http://localhost:8080
 
 ⭐ If you find OmilosRAG useful, please consider giving it a **star** — it helps others discover the project and motivates continued development!
 
-MIT License &copy; 2026 Le Duc Dat
+MIT License &copy; 
 
 </div>
