@@ -655,20 +655,6 @@ All endpoints prefixed with `/api/v1`. Interactive docs at http://localhost:8080
 
 ---
 
-## Star History
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=LeDat98%2FOmilosRAG&type=timeline&legend=bottom-right">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=LeDat98/OmilosRAG&type=timeline&theme=dark&legend=bottom-right" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=LeDat98/OmilosRAG&type=timeline&legend=bottom-right" />
-   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=LeDat98/OmilosRAG&type=timeline&legend=bottom-right" />
- </picture>
-</a>
-
----
-
 <div align="center">
 
 ⭐ If you find OmilosRAG useful, please consider giving it a **star** — it helps others discover the project and motivates continued development!
