@@ -50,7 +50,7 @@ export function WorkspacePage() {
 
   const { data: ragStats } = useQuery({
     queryKey: ["rag-stats", workspaceId],
-    queryFn: () => api.get<RAGStats>(`/OmilosRAG/stats/${workspaceId}`),
+    queryFn: () => api.get<RAGStats>(`/rag/stats/${workspaceId}`),
     enabled: !!workspaceId,
   });
 

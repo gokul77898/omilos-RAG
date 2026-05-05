@@ -46,8 +46,8 @@ class RerankerService:
         if self._model is None:
             from sentence_transformers import CrossEncoder
             logger.info(f"Loading reranker model: {self.model_name}")
-            self._model = CrossEncoder(self.model_name)
-            logger.info(f"Reranker model loaded: {self.model_name}")
+            self._model = CrossEncoder(self.model_name, device="cpu")
+            logger.info(f"Reranker model loaded: {self.model_name} (CPU)")
         return self._model
 
     def rerank(

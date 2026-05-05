@@ -56,9 +56,25 @@ async def _kg_llm_complete(
 
     messages.append(LLMMessage(role="user", content=prompt))
 
-    return await provider.acomplete(
-        messages, temperature=0.0, max_tokens=4096,
-    )
+    # KG extraction needs higher max_tokens — entity/relationship JSON can be very long
+    max_tokens = 8192 if not keyword_extraction else 2048
+
+    # Retry up to 3 times for transient API errors
+    for attempt in range(3):
+        try:
+            result = await provider.acomplete(
+                messages, temperature=0.0, max_tokens=max_tokens,
+            )
+            if result and len(result.strip()) > 0:
+                return result
+            logger.warning(f"KG LLM returned empty result (attempt {attempt+1}/3)")
+        except Exception as e:
+            logger.warning(f"KG LLM call failed (attempt {attempt+1}/3): {e}")
+            if attempt == 2:
+                raise
+            await asyncio.sleep(2 * (attempt + 1))
+
+    return ""
 
 
 async def _kg_embed(texts: list[str]) -> np.ndarray:

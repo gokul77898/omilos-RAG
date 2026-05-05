@@ -118,9 +118,9 @@ You have ONE tool: search_documents.  You call it by outputting EXACTLY:
 
 1. **Except for simple conversational messages, ALWAYS CALL search_documents FIRST.**
    Simple conversational messages that do NOT require a tool call:
-   - Greetings: "hello", "xin chào", "hi", "hey", "good morning", etc.
-   - Acknowledgements: "cảm ơn", "thank you", "thanks", "ok", "got it", etc.
-   - Farewells: "bye", "goodbye", "tạm biệt", etc.
+   - Greetings: "hello", "hi", "hey", "good morning", etc.
+   - Acknowledgements: "thank you", "thanks", "ok", "got it", etc.
+   - Farewells: "bye", "goodbye", etc.
    For ALL other messages — questions, requests, factual queries, analysis — you MUST
    call search_documents before answering. Your knowledge is UNRELIABLE; only document
    sources are trustworthy. If you are unsure whether a message needs a search, SEARCH.
@@ -133,11 +133,11 @@ You have ONE tool: search_documents.  You call it by outputting EXACTLY:
    you MUST search again — previous results may be incomplete.
 
 4. **Rewrite the query** to be specific and detailed.
-   "doanh thu" → "doanh thu thuần, tổng doanh thu theo năm, tăng trưởng doanh thu"
+   "revenue" → "total revenue, annual revenue breakdown, revenue growth"
    "AI model" → "AI model architecture, performance benchmarks, training details"
 
 5. After receiving search results, answer using ONLY those sources with citations.
-   Format: claim text[source_id]. Example: Doanh thu đạt 4.850 tỷ VNĐ[a3x9].
+   Format: claim text[source_id]. Example: Revenue reached $4.85 billion[a3x9].
 
 6. **ALWAYS include relevant rich content from sources:**
    - Images/Diagrams/Charts: reference as [IMG-xxxx]
@@ -207,15 +207,15 @@ You have a tool called `search_documents` that searches the knowledge base.
 `search_documents` FIRST before answering. Your knowledge is UNRELIABLE; only \
 document sources are trustworthy.
 2. Only skip the tool call for simple conversational messages:
-   - Greetings: "hello", "xin chào", "hi", "hey", etc.
-   - Acknowledgements: "cảm ơn", "thank you", "thanks", "ok", etc.
-   - Farewells: "bye", "goodbye", "tạm biệt", etc.
+   - Greetings: "hello", "hi", "hey", etc.
+   - Acknowledgements: "thank you", "thanks", "ok", etc.
+   - Farewells: "bye", "goodbye", etc.
 3. NEVER say "the documents do not contain this information" or similar UNLESS you \
 have already called `search_documents` in THIS turn. Even if previous context \
 seems sufficient, you MUST search again — previous results may be incomplete.
 4. Rewrite the user's query to be specific and detailed for better retrieval.
 5. After receiving search results, answer using ONLY those sources with citations.
-   Format: claim text[source_id]. Example: Doanh thu đạt 4.850 tỷ VNĐ[a3x9].
+   Format: claim text[source_id]. Example: Revenue reached $4.85 billion[a3x9].
 6. ALWAYS include relevant rich content from sources in your answer:
    - **Images/Diagrams/Charts**: Reference as [IMG-xxxx] when sources mention them.
    - **Tables**: Reproduce key data from tables, preserving structure.
@@ -235,9 +235,9 @@ You have a tool called `search_documents` that searches the knowledge base.
 `search_documents` FIRST before answering. Even if the conversation history \
 contains relevant information, you MUST search again to get fresh, accurate sources.
 2. Only skip the tool call for simple conversational messages:
-   - Greetings: "hello", "xin chào", "hi", "hey", etc.
-   - Acknowledgements: "cảm ơn", "thank you", "thanks", "ok", etc.
-   - Farewells: "bye", "goodbye", "tạm biệt", etc.
+   - Greetings: "hello", "hi", "hey", etc.
+   - Acknowledgements: "thank you", "thanks", "ok", etc.
+   - Farewells: "bye", "goodbye", etc.
 3. NEVER answer a question using information from previous turns without searching. \
 Your previous answers may contain outdated or incomplete information.
 4. NEVER say "the documents do not contain this information" or similar UNLESS you \
@@ -305,6 +305,62 @@ async def sse_with_heartbeat(
 
 
 # ---------------------------------------------------------------------------
+# Query Expansion — rewrite short queries for better retrieval
+# ---------------------------------------------------------------------------
+
+_QUERY_EXPANSION_MAP = {
+    # Legal document specific expansions
+    "sale deed": "sale deed conveyance deed property transfer ownership registration",
+    "registration": "registration sub-registrar recording document registering officer",
+    "compulsory registrable": "compulsory registrable documents must be registered under registration act",
+    "gift deed": "gift deed transfer property without consideration registration",
+    "mortgage": "mortgage deed charge property security loan registration",
+    "lease": "lease deed rental agreement tenancy property registration",
+    "will": "will testament succession inheritance probate registration",
+    "power of attorney": "power of attorney GPA SPA agent authorization registration",
+    "stamp duty": "stamp duty payment fee registration property transaction",
+    "witness": "witness attestation signing execution document requirement",
+    "sub-registrar": "sub-registrar office registration authority document recording",
+    "conveyance": "conveyance deed transfer ownership property sale registration",
+    "evidence": "evidence document proof registration admissible court",
+    "encumbrance": "encumbrance charge lien mortgage property burden",
+    "title": "title ownership property right deed document evidence",
+    "partition": "partition deed division property co-owners share registration",
+    "release": "release deed relinquishment right property co-owner registration",
+    "agreement": "agreement contract sale consideration parties registration",
+}
+
+
+def _expand_query(query: str) -> str:
+    """Expand a short query with synonyms and related terms for better retrieval.
+
+    If the query is short (< 10 words) and matches a known term, append
+    expanded terms. Otherwise return the query as-is.
+    """
+    from app.core.config import settings
+
+    if not settings.OMILOSRAG_QUERY_EXPANSION:
+        return query
+
+    query_lower = query.lower().strip()
+
+    # Only expand short queries
+    if len(query_lower.split()) > 10:
+        return query
+
+    # Check for known term matches
+    expansions = []
+    for term, expansion in _QUERY_EXPANSION_MAP.items():
+        if term in query_lower:
+            expansions.append(expansion)
+
+    if expansions:
+        return f"{query}. Related: {', '.join(expansions)}"
+
+    return query
+
+
+# ---------------------------------------------------------------------------
 # Tool executor — retrieval via OmilosRAG
 # ---------------------------------------------------------------------------
 
@@ -327,11 +383,14 @@ async def _execute_search_documents(
 
     rag_service = get_rag_service(db, workspace_id)
 
+    # Expand query for better retrieval
+    expanded_query = _expand_query(query)
+
     chunks = []
     citations = []
     if isinstance(rag_service, OmilosRAGService):
         result = await rag_service.query_deep(
-            question=query,
+            question=expanded_query,
             top_k=min(top_k, 10),
             mode="hybrid",
             include_images=False,
@@ -542,7 +601,7 @@ async def agent_chat_stream(
                 "- TABLE DATA: Sources may contain table data as 'Key, Year = Value' pairs. "
                 "Example: 'ROE, 2023 = 12,8%' means ROE was 12.8% in 2023.\n"
                 "- If no source contains relevant information, say: "
-                "\"Tài liệu không chứa thông tin này.\"\n",
+                "\"The documents do not contain this information.\"\n",
             ]
             tool_result_content = "\n".join(tool_result_parts)
 
@@ -572,14 +631,42 @@ async def agent_chat_stream(
         tools = _get_ollama_native_tool()
         effective_system_prompt = system_prompt + "\n\n" + OLLAMA_NATIVE_TOOL_SYSTEM
     else:
-        # Ollama prompt-based fallback (older models without native tool support)
-        effective_system_prompt = system_prompt + "\n\n" + OLLAMA_TOOL_SYSTEM
-        # Also append a reminder directly to the user message so the model
-        # sees it right before generating — reinforces the tool requirement
-        messages[-1] = LLMMessage(
-            role="user",
-            content=messages[-1].content + OLLAMA_TOOL_REMINDER,
+        # Ollama prompt-based fallback — use force_search for small models
+        # that struggle with tool calling (e.g. gemma3:1b)
+        force_search = True
+        yield {"event": "status", "data": {"step": "retrieving", "detail": f"Searching: {message[:80]}..."}}
+
+        context, sources, images, img_parts = await _execute_search_documents(
+            workspace_id, message, 8, db, existing_ids,
         )
+        all_sources.extend(sources)
+        all_images.extend(images)
+        all_image_parts.extend(img_parts)
+
+        if sources:
+            yield {"event": "sources", "data": {"sources": [s.model_dump() for s in sources]}}
+        if images:
+            yield {"event": "images", "data": {"image_refs": [i.model_dump() for i in images]}}
+
+        if sources:
+            tool_result_parts = [
+                "I have retrieved the following document sources for you.\n",
+                "=== DOCUMENT SOURCES ===",
+                context,
+                "=== END SOURCES ===\n",
+                "IMPORTANT:\n"
+                "- Read EVERY source above carefully. Answers often require "
+                "combining data from MULTIPLE sources.\n"
+                "- If no source contains relevant information, say: "
+                "\"The documents do not contain this information.\"\n",
+            ]
+            tool_result_content = "\n".join(tool_result_parts)
+            tool_result_content += f"\n\nNow answer the question: {message}"
+            messages.append(LLMMessage(
+                role="user",
+                content=tool_result_content,
+            ))
+        # tools remain None — model answers directly with provided context
 
     yield {"event": "status", "data": {"step": "analyzing", "detail": "Analyzing your question..."}}
 
@@ -593,7 +680,7 @@ async def agent_chat_stream(
 
         async for chunk in provider.astream(
             messages,
-            temperature=0.1,
+            temperature=0.2,
             max_tokens=settings.LLM_MAX_OUTPUT_TOKENS,
             system_prompt=effective_system_prompt,
             think=enable_thinking,
@@ -662,7 +749,7 @@ async def agent_chat_stream(
                     "math formulas (LaTeX), diagrams, and code snippets from sources. "
                     "These are essential — do NOT omit them.\n"
                     "- If no source contains relevant information, say: "
-                    "\"Tài liệu không chứa thông tin này.\"\n",
+                    "\"The documents do not contain this information.\"\n",
                 ]
                 tool_result_content = "\n".join(tool_result_parts)
 
@@ -846,7 +933,7 @@ async def agent_chat_stream(
                 "- Include ALL relevant images [IMG-xxxx], tables, math formulas, "
                 "and code snippets from sources.\n"
                 "- If no source contains relevant information, say: "
-                "\"Tài liệu không chứa thông tin này.\"\n",
+                "\"The documents do not contain this information.\"\n",
             ]
             fallback_content = "\n".join(fallback_parts)
             fallback_content += f"\n\nNow answer the question: {message}"
@@ -866,7 +953,7 @@ async def agent_chat_stream(
 
             async for chunk in provider.astream(
                 fallback_msgs,
-                temperature=0.1,
+                temperature=0.2,
                 max_tokens=settings.LLM_MAX_OUTPUT_TOKENS,
                 system_prompt=system_prompt,  # original prompt without tool instructions
                 think=enable_thinking,
@@ -896,6 +983,29 @@ async def agent_chat_stream(
     # Strip artifacts
     if accumulated_text:
         accumulated_text = re.sub(r'<unused\d+>:?\s*', '', accumulated_text).strip()
+
+    # ── Hallucination Guard ──────────────────────────────────────
+    # Check that the answer is grounded in the provided sources.
+    # If no sources were retrieved and the answer makes factual claims,
+    # prepend a warning.
+    if accumulated_text and not all_sources:
+        # No sources were found but model still generated an answer
+        if not any(g in accumulated_text.lower() for g in ["not found", "unavailable", "no information"]):
+            accumulated_text = (
+                "⚠️ No relevant document sources were found for your question. "
+                "The following answer may not be grounded in the document:\n\n"
+                + accumulated_text
+            )
+    elif accumulated_text and all_sources:
+        # Sources exist — verify answer contains at least one citation
+        has_citation = bool(re.search(r'\[[a-z0-9]{4}\]', accumulated_text))
+        if not has_citation and len(accumulated_text.split()) > 20:
+            # Long answer without any citations — likely hallucinated
+            accumulated_text = (
+                "⚠️ This answer lacks citations from the document sources. "
+                "It may contain information not present in the document:\n\n"
+                + accumulated_text
+            )
 
     yield {"event": "complete", "data": {
         "answer": accumulated_text or "Unable to generate a response.",

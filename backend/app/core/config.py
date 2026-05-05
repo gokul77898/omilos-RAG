@@ -84,7 +84,8 @@ class Settings(BaseSettings):
     OMILOSRAG_ENABLE_IMAGE_CAPTIONING: bool = True
     OMILOSRAG_ENABLE_TABLE_CAPTIONING: bool = True
     OMILOSRAG_MAX_TABLE_MARKDOWN_CHARS: int = 8000
-    OMILOSRAG_CHUNK_MAX_TOKENS: int = 512
+    OMILOSRAG_CHUNK_MAX_TOKENS: int = 400
+    OMILOSRAG_CHUNK_OVERLAP_TOKENS: int = 80
     OMILOSRAG_KG_QUERY_TIMEOUT: float = 30.0
     OMILOSRAG_KG_CHUNK_TOKEN_SIZE: int = 1200
     OMILOSRAG_KG_LANGUAGE: str = "English"
@@ -115,6 +116,7 @@ class Settings(BaseSettings):
     OMILOSRAG_VECTOR_PREFETCH: int = 20
     OMILOSRAG_RERANKER_TOP_K: int = 8
     OMILOSRAG_MIN_RELEVANCE_SCORE: float = 0.15
+    OMILOSRAG_QUERY_EXPANSION: bool = True
 
     # Neo4j Graph Database
     NEO4J_URI: str = Field(default="bolt://localhost:7687")

@@ -8,6 +8,7 @@ Supports both Gemini 2.5 (thinking_budget_tokens) and Gemini 3.x+
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from typing import AsyncGenerator, Optional
@@ -142,18 +143,36 @@ class GeminiLLMProvider(LLMProvider):
         if use_think:
             config.thinking_config = self._build_thinking_config()
 
-        try:
-            response = self._client.models.generate_content(
-                model=self._model,
-                contents=contents,
-                config=config,
-            )
-            if use_think:
-                return self._extract_with_thinking(response)
-            return response.text or ""
-        except Exception as e:
-            logger.error(f"Gemini LLM call failed: {e}")
-            return LLMResult(content="") if use_think else ""
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = self._client.models.generate_content(
+                    model=self._model,
+                    contents=contents,
+                    config=config,
+                )
+                if use_think:
+                    return self._extract_with_thinking(response)
+                return response.text or ""
+            except Exception as e:
+                err_str = str(e)
+                is_429 = "429" in err_str or "RESOURCE_EXHAUSTED" in err_str
+                if is_429 and attempt < max_retries - 1:
+                    # Parse retry delay from error, default 30s
+                    wait = 30
+                    import re as _re
+                    m = _re.search(r"retryDelay.*?(\d+)s", err_str)
+                    if m:
+                        wait = int(m.group(1)) + 2
+                    logger.warning(
+                        f"Gemini 429 rate limit (attempt {attempt+1}/{max_retries}), "
+                        f"retrying in {wait}s..."
+                    )
+                    import time
+                    time.sleep(wait)
+                    continue
+                logger.error(f"Gemini LLM call failed: {e}")
+                return LLMResult(content="") if use_think else ""
 
     @staticmethod
     def _extract_with_thinking(response) -> LLMResult:
@@ -205,42 +224,64 @@ class GeminiLLMProvider(LLMProvider):
         # including thought_signature for proper multi-turn circulation.
         accumulated_parts: list[types.Part] = []
 
-        try:
-            stream = await self._client.aio.models.generate_content_stream(
-                model=self._model,
-                contents=contents,
-                config=config,
-            )
-            async for chunk in stream:
-                if not chunk.candidates:
-                    continue
-                for part in chunk.candidates[0].content.parts:
-                    accumulated_parts.append(part)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                stream = await self._client.aio.models.generate_content_stream(
+                    model=self._model,
+                    contents=contents,
+                    config=config,
+                )
+                async for chunk in stream:
+                    if not chunk.candidates:
+                        continue
+                    for part in chunk.candidates[0].content.parts:
+                        accumulated_parts.append(part)
 
-                    if getattr(part, "thought", False):
-                        if part.text:
-                            yield StreamChunk(type="thinking", text=part.text)
-                    elif hasattr(part, "function_call") and part.function_call:
-                        fc = part.function_call
-                        yield StreamChunk(
-                            type="function_call",
-                            function_call={
-                                "name": fc.name,
-                                "args": dict(fc.args) if fc.args else {},
-                            },
-                        )
-                    elif hasattr(part, "text") and part.text:
-                        yield StreamChunk(type="text", text=part.text)
-        except Exception as e:
-            logger.error(f"Gemini streaming failed: {e}")
-            yield StreamChunk(type="text", text="")
-        finally:
-            # Store the complete response Content for callers that need
-            # thought_signature circulation (Gemini 3 function calling).
-            self.last_response_content = types.Content(
-                role="model",
-                parts=accumulated_parts,
-            ) if accumulated_parts else None
+                        if getattr(part, "thought", False):
+                            if part.text:
+                                yield StreamChunk(type="thinking", text=part.text)
+                        elif hasattr(part, "function_call") and part.function_call:
+                            fc = part.function_call
+                            yield StreamChunk(
+                                type="function_call",
+                                function_call={
+                                    "name": fc.name,
+                                    "args": dict(fc.args) if fc.args else {},
+                                },
+                            )
+                        elif hasattr(part, "text") and part.text:
+                            yield StreamChunk(type="text", text=part.text)
+                break  # success — exit retry loop
+            except Exception as e:
+                err_str = str(e)
+                is_429 = "429" in err_str or "RESOURCE_EXHAUSTED" in err_str
+                if is_429 and attempt < max_retries - 1:
+                    wait = 30
+                    import re as _re
+                    m = _re.search(r"retryDelay.*?(\d+)s", err_str)
+                    if m:
+                        wait = int(m.group(1)) + 2
+                    logger.warning(
+                        f"Gemini stream 429 rate limit (attempt {attempt+1}/{max_retries}), "
+                        f"retrying in {wait}s..."
+                    )
+                    yield StreamChunk(
+                        type="status",
+                        text=f"Rate limited, retrying in {wait}s...",
+                    )
+                    await asyncio.sleep(wait)
+                    continue
+                logger.error(f"Gemini streaming failed: {e}")
+                yield StreamChunk(type="text", text="")
+                break
+
+        # Store the complete response Content for callers that need
+        # thought_signature circulation (Gemini 3 function calling).
+        self.last_response_content = types.Content(
+            role="model",
+            parts=accumulated_parts,
+        ) if accumulated_parts else None
 
     def supports_vision(self) -> bool:
         return True

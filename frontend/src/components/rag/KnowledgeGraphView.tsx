@@ -6,7 +6,6 @@ import {
   Maximize2,
   Network,
   Loader2,
-  Sparkles,
   Database,
   Zap,
 } from "lucide-react";
@@ -48,42 +47,6 @@ function getNodeColor(type: string): string {
 
 function getNodeIcon(type: string): string {
   return TYPE_ICONS[type.toLowerCase()] ?? "🔵";
-}
-
-// ---------------------------------------------------------------------------
-// Mock data for demo when no real graph exists
-// ---------------------------------------------------------------------------
-function generateMockData(): KGGraphData {
-  const mockNodes: KGGraphNode[] = [
-    { id: "n1", label: "Apple Inc.", entity_type: "organization", degree: 5 },
-    { id: "n2", label: "Tim Cook", entity_type: "person", degree: 3 },
-    { id: "n3", label: "iPhone 16", entity_type: "product", degree: 4 },
-    { id: "n4", label: "Cupertino", entity_type: "location", degree: 2 },
-    { id: "n5", label: "WWDC 2025", entity_type: "event", degree: 3 },
-    { id: "n6", label: "AI Chip", entity_type: "technology", degree: 3 },
-    { id: "n7", label: "Revenue $391B", entity_type: "financial_metric", degree: 2 },
-    { id: "n8", label: "Neural Engine", entity_type: "technology", degree: 2 },
-    { id: "n9", label: "MacBook Pro", entity_type: "product", degree: 2 },
-    { id: "n10", label: "GDPR", entity_type: "regulation", degree: 1 },
-    { id: "n11", label: "Craig Federighi", entity_type: "person", degree: 2 },
-    { id: "n12", label: "Q4 2025", entity_type: "date", degree: 1 },
-  ];
-  const mockEdges: KGGraphEdge[] = [
-    { source: "n1", target: "n2", label: "CEO", weight: 1.0 },
-    { source: "n1", target: "n3", label: "produces", weight: 0.9 },
-    { source: "n1", target: "n4", label: "headquartered", weight: 0.7 },
-    { source: "n1", target: "n7", label: "reports", weight: 0.8 },
-    { source: "n2", target: "n5", label: "keynote", weight: 0.6 },
-    { source: "n3", target: "n6", label: "powered by", weight: 0.8 },
-    { source: "n5", target: "n6", label: "announced", weight: 0.7 },
-    { source: "n5", target: "n11", label: "presented by", weight: 0.5 },
-    { source: "n6", target: "n8", label: "includes", weight: 0.6 },
-    { source: "n1", target: "n9", label: "produces", weight: 0.9 },
-    { source: "n9", target: "n8", label: "powered by", weight: 0.7 },
-    { source: "n1", target: "n10", label: "complies with", weight: 0.4 },
-    { source: "n7", target: "n12", label: "period", weight: 0.5 },
-  ];
-  return { nodes: mockNodes, edges: mockEdges, is_truncated: false };
 }
 
 // ---------------------------------------------------------------------------
@@ -199,7 +162,7 @@ interface GraphCanvasProps {
   highlightEntities?: string[];
 }
 
-const GraphCanvas = memo(function GraphCanvas({ data, width, height, highlightEntities = [], isDemo = false }: GraphCanvasProps & { isDemo?: boolean }) {
+const GraphCanvas = memo(function GraphCanvas({ data, width, height, highlightEntities = [] }: GraphCanvasProps) {
   const [nodes, setNodes] = useState<SimNode[]>([]);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
@@ -336,16 +299,8 @@ const GraphCanvas = memo(function GraphCanvas({ data, width, height, highlightEn
 
   return (
     <div className="relative w-full h-full">
-      {/* Demo badge */}
-      {isDemo && (
-        <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 rounded-full px-3 py-1">
-          <Sparkles className="w-3 h-3 text-amber-500" />
-          <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">DEMO DATA</span>
-        </div>
-      )}
-
       {/* DB badge */}
-      <div className={`absolute z-10 flex items-center gap-1.5 bg-background/80 backdrop-blur-sm border rounded-full px-3 py-1 ${isDemo ? 'top-2 left-[140px]' : 'top-2 left-2'}`}>
+      <div className="absolute z-10 flex items-center gap-1.5 bg-background/80 backdrop-blur-sm border rounded-full px-3 py-1 top-2 left-2">
         <Database className="w-3 h-3 text-emerald-500" />
         <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Neo4j</span>
         <span className="text-[10px] text-muted-foreground">{data.nodes.length} nodes · {data.edges.length} edges</span>
@@ -690,7 +645,6 @@ interface KnowledgeGraphViewProps {
 export const KnowledgeGraphView = memo(function KnowledgeGraphView({ projectId, highlightEntities = [] }: KnowledgeGraphViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 600, height: 400 });
-  const [demoMode, setDemoMode] = useState(false);
 
   // Observe container size — fill available space
   useEffect(() => {
@@ -724,51 +678,34 @@ export const KnowledgeGraphView = memo(function KnowledgeGraphView({ projectId, 
   }
 
   const hasRealData = data && data.nodes.length > 0;
-  const graphData = demoMode ? generateMockData() : data;
 
-  if (!hasRealData && !demoMode) {
+  if (!hasRealData) {
     return (
       <div className="flex flex-col items-center py-10 text-center gap-4">
         <div className="relative">
           <Network className="w-16 h-16 text-muted-foreground/20" />
           <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center">
-            <Sparkles className="w-3 h-3 text-emerald-500" />
+            <Zap className="w-3 h-3 text-emerald-500" />
           </div>
         </div>
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">No graph data available</p>
+        <div className="space-y-1">
+          <h3 className="text-sm font-semibold text-foreground">No Knowledge Graph Yet</h3>
           <p className="text-xs text-muted-foreground/60 mt-1">
             Process documents with OmilosRAG to build the knowledge graph
           </p>
         </div>
-        <button
-          onClick={() => setDemoMode(true)}
-          className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-sm font-medium hover:bg-emerald-500/20 transition-colors"
-        >
-          <Sparkles className="w-4 h-4" />
-          Preview Demo Graph
-        </button>
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} className="w-full h-full relative">
+    <div ref={containerRef} className="w-full h-full min-h-[400px]">
       <GraphCanvas
-        data={graphData!}
+        data={data!}
         width={dimensions.width}
         height={dimensions.height}
         highlightEntities={highlightEntities}
-        isDemo={demoMode}
       />
-      {demoMode && (
-        <button
-          onClick={() => setDemoMode(false)}
-          className="absolute bottom-2 right-2 z-20 text-[10px] text-muted-foreground bg-background/80 backdrop-blur-sm border rounded px-2 py-1 hover:bg-muted transition-colors"
-        >
-          Exit Demo
-        </button>
-      )}
     </div>
   );
 });

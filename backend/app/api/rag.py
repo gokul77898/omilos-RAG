@@ -1076,7 +1076,7 @@ async def chat_with_documents(
         "Example: 'ROE, 2023 = 12,8%' means ROE was 12.8% in 2023. "
         "Extract and report these values.\n"
         "- If no source contains relevant information, say: "
-        "\"Tài liệu không chứa thông tin này.\"\n"
+        "\"The documents do not contain this information.\"\n"
     )
 
     # 4. Conversation context recap (if history exists)
@@ -1311,12 +1311,13 @@ async def debug_chat(
         "- You MAY compare, synthesize, and reason across multiple sources.\n"
         "- Cite every fact using the source IDs shown in brackets, e.g. [a3x9][b2m7] — one ID per bracket.\n"
         "- For images: [IMG-p4f2][IMG-q7r3] — use the IDs shown in the image list.\n"
-        "- NEVER say 'không có thông tin' or 'no information' for data that IS present "
+        "- NEVER say 'no information' for data that IS present "
         "in any source. If a source contains 'Key = Value', report that value.\n"
         "- Only say information is unavailable when you have checked ALL sources "
         "and none contains the answer.\n"
         "- If no source is relevant at all, say: "
-        "\"Tài liệu không chứa thông tin này.\" without any citations.\n"
+        "The documents do not contain this information."
+        "\n"
         "- Answer in the same language as my question.\n"
     )
 
