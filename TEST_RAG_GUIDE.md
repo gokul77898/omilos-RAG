@@ -3,7 +3,7 @@
 ## ✅ Setup Complete
 
 Your Gemini API key is configured:
-- **API Key**: `AIzaSyA06Sv7M2bAzoyND3TebFFyPWUyOV9HHTk`
+- **API Key**: `google api key'
 - **Model**: `gemini-2.5-flash-preview-04-1`
 - **Provider**: Gemini (cloud)
 
